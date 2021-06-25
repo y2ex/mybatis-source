@@ -93,9 +93,12 @@ public class XMLConfigBuilder extends BaseBuilder {
 
   public Configuration parse() {
     if (parsed) {
+      // 如果已经解析过，抛出异常
       throw new BuilderException("Each XMLConfigBuilder can only be used once.");
     }
+    // 设置解析标志位
     parsed = true;
+    // 解析 mybatis-config.xml 的节点
     parseConfiguration(parser.evalNode("/configuration"));
     return configuration;
   }
@@ -103,7 +106,10 @@ public class XMLConfigBuilder extends BaseBuilder {
   private void parseConfiguration(XNode root) {
     try {
       // issue #117 read properties first
+      // 先解析 properties 数据源属性配置，后面会使用该配置
+      // 将解析到的所有属性添加到 parser和configuration 中的 Variables 里面
       propertiesElement(root.evalNode("properties"));
+
       Properties settings = settingsAsProperties(root.evalNode("settings"));
       loadCustomVfs(settings);
       loadCustomLogImpl(settings);
@@ -113,8 +119,11 @@ public class XMLConfigBuilder extends BaseBuilder {
       objectWrapperFactoryElement(root.evalNode("objectWrapperFactory"));
       reflectorFactoryElement(root.evalNode("reflectorFactory"));
       settingsElement(settings);
+
       // read it after objectFactory and objectWrapperFactory issue #631
+      // 解析数据源，将解析到的数据添加到 configuration 中的 environment 中
       environmentsElement(root.evalNode("environments"));
+
       databaseIdProviderElement(root.evalNode("databaseIdProvider"));
       typeHandlerElement(root.evalNode("typeHandlers"));
       mapperElement(root.evalNode("mappers"));
@@ -221,21 +230,28 @@ public class XMLConfigBuilder extends BaseBuilder {
 
   private void propertiesElement(XNode context) throws Exception {
     if (context != null) {
+      // 先获取子标签属性的值
       Properties defaults = context.getChildrenAsProperties();
+      // 获取 properties->resource 的值
       String resource = context.getStringAttribute("resource");
+      // 获取 properties->url 的值
       String url = context.getStringAttribute("url");
       if (resource != null && url != null) {
+        // properties->resource和url 不能同时有值
         throw new BuilderException("The properties element cannot specify both a URL and a resource based property file reference.  Please specify one or the other.");
       }
+      // 加载 resource或url 对应文件的属性，添加到defaults中。如果子标签有相同属性会被覆盖，所以子标签和外部文件配置了相同属性，会使用外部文件中的值
       if (resource != null) {
         defaults.putAll(Resources.getResourceAsProperties(resource));
       } else if (url != null) {
         defaults.putAll(Resources.getUrlAsProperties(url));
       }
       Properties vars = configuration.getVariables();
+      // 如果 configuration中之前有属性值，添加到 defaults 中
       if (vars != null) {
         defaults.putAll(vars);
       }
+      // 将所有属性添加到 parser和configuration 中的 Variables 里面
       parser.setVariables(defaults);
       configuration.setVariables(defaults);
     }
